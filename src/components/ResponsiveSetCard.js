@@ -57,7 +57,7 @@ function ResponsiveSymbol(props) {
       width={props.size}
       height={2 * props.size}
       viewBox="0 0 200 400"
-      style={{ transition: "width 0.5s, height 0.5s" }}
+      style={{ ...props.style, transition: "width 0.5s, height 0.5s" }}
     >
       <use
         href={"#" + shape}
@@ -71,6 +71,7 @@ function ResponsiveSymbol(props) {
 
 function ResponsiveSetCard(props) {
   const classes = useStyles();
+  const theme = useTheme();
 
   // Black magic below to scale cards given any width
   const { width, value, onClick, background, active } = props;
@@ -78,7 +79,21 @@ function ResponsiveSetCard(props) {
   const margin = Math.round(width * 0.035);
   const contentWidth = width - 2 * margin;
   const contentHeight = height - 2 * margin;
-  const { color, shape, shade, number } = cardTraits(value);
+  const { color, shape, shade, border, number } = cardTraits(value);
+  const COLORS = [theme.setCard.purple, theme.setCard.green, theme.setCard.red];
+  const BACKGROUNDS = ["#ffffff", "#808080", "#000000"];
+  //const BORDERS = ["3px solid", "4px dotted", "6px double"];
+  const BORDERS = ["3px solid", "6px double", "6px double"];
+  const OUTLINES = { 2: "2px solid" };
+  const BACKGROUND_IMGS = [
+    undefined,
+    "radial-gradient(circle, #606060 10%, transparent 11%)," +
+      "radial-gradient(circle at bottom left, #606060 5%, transparent 6%)," +
+      "radial-gradient(circle at bottom right, #606060 5%, transparent 6%)," +
+      "radial-gradient(circle at top left, #606060 5%, transparent 6%)," +
+      "radial-gradient(circle at top right, #606060 5%, transparent 6%)",
+    "repeating-linear-gradient(135deg, #606060 0, #606060 4%, transparent 0, transparent 50%)",
+  ];
 
   return (
     <div
@@ -92,6 +107,13 @@ function ResponsiveSetCard(props) {
         margin: margin,
         borderRadius: margin,
         background,
+        //backgroundColor: BACKGROUNDS[border],
+        //border: `solid 4px ${COLORS[border]}`,
+        //border: BORDERS[border],
+        //outline: OUTLINES[border],
+        //outlineOffset: -10,
+        //backgroundImage: BACKGROUND_IMGS[border],
+        //backgroundSize: "32px 32px",
         transition: "width 0.5s, height 0.5s",
       }}
       onClick={onClick}
@@ -103,6 +125,7 @@ function ResponsiveSetCard(props) {
           shape={shape}
           shade={shade}
           size={Math.round(contentHeight * 0.36)}
+          style={{ transform: `rotate(${(((border + 1) % 3) - 1) * 30}deg)` }}
           colorOverride={props.colorOverride}
         />
       ))}

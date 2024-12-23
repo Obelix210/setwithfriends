@@ -67,6 +67,7 @@ export function cardTraits(card) {
     color: card.charCodeAt(0) - zeroCode,
     shape: card.charCodeAt(1) - zeroCode,
     shade: traits < 4 ? 0 : card.charCodeAt(2) - zeroCode,
+    border: traits < 5 ? 0 : card.charCodeAt(3) - zeroCode,
     number: card.charCodeAt(traits - 1) - zeroCode,
   };
 }
@@ -80,6 +81,7 @@ export function findSet(deck, gameMode = "normal", old) {
       if (
         gameMode === "normal" ||
         gameMode === "junior" ||
+        gameMode === "megaset" ||
         (gameMode === "setchain" && old.length === 0)
       ) {
         if (deckSet.has(c)) {
@@ -188,7 +190,7 @@ export function computeState(gameData, gameMode = "normal") {
   const history = []; // list of valid events in time order
   const current = gameData.deck.slice(); // remaining cards in the game
   const lastEvents = {}; // time of the last event for each user
-  const minBoardSize = gameMode === "ultra9" ? 9 : 12;
+  const minBoardSize = modes[gameMode].minBoardSize;
   const internalGameState = {
     used,
     current,
@@ -240,6 +242,7 @@ export const modes = {
     description: "Find 3 cards that form a Set.",
     setType: "Set",
     traits: 4,
+    minBoardSize: 12,
     checkFn: checkSet,
     processFn: processEventCommon,
   },
@@ -249,6 +252,7 @@ export const modes = {
     description: "A simplified version that only uses solid shaded cards.",
     setType: "Set",
     traits: 3,
+    minBoardSize: 9,
     checkFn: checkSet,
     processFn: processEventCommon,
   },
@@ -258,6 +262,7 @@ export const modes = {
     description: "In every Set, you have to use 1 card from the previous Set.",
     setType: "Set",
     traits: 4,
+    minBoardSize: 12,
     checkFn: checkSet,
     processFn: processEventChain,
   },
@@ -268,6 +273,7 @@ export const modes = {
       "Find 4 cards such that the first pair and the second pair form a Set with the same additional card.",
     setType: "UltraSet",
     traits: 4,
+    minBoardSize: 12,
     checkFn: checkSetUltra,
     processFn: processEventCommon,
   },
@@ -278,7 +284,18 @@ export const modes = {
       "Same as UltraSet, but only 9 cards are dealt at a time, unless they don't contain any sets.",
     setType: "UltraSet",
     traits: 4,
+    minBoardSize: 9,
     checkFn: checkSetUltra,
+    processFn: processEventCommon,
+  },
+  megaset: {
+    name: "MegaSet",
+    color: "green",
+    description: "Each card has 5 traits instead of 4.",
+    setType: "Set",
+    traits: 5,
+    minBoardSize: 15,
+    checkFn: checkSet,
     processFn: processEventCommon,
   },
 };

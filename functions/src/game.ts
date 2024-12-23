@@ -9,7 +9,13 @@ interface GameEvent {
   c4?: string;
 }
 
-export type GameMode = "normal" | "junior" | "setchain" | "ultraset" | "ultra9";
+export type GameMode =
+  | "normal"
+  | "junior"
+  | "setchain"
+  | "ultraset"
+  | "ultra9"
+  | "megaset";
 
 function makeCards(symbols: string[], traits: number): string[] {
   if (traits === 1) return symbols;
@@ -71,6 +77,7 @@ export function findSet(deck: string[], gameMode: GameMode, old?: string[]) {
       if (
         gameMode === "normal" ||
         gameMode === "junior" ||
+        gameMode === "megaset" ||
         (gameMode === "setchain" && old!.length === 0)
       ) {
         if (deckSet.has(c)) {
@@ -162,6 +169,10 @@ const modes = {
   },
   ultra9: {
     traits: 4,
+    replayFn: replayEventCommon,
+  },
+  megaset: {
+    traits: 5,
     replayFn: replayEventCommon,
   },
 };
