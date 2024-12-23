@@ -9,20 +9,18 @@ interface GameEvent {
   c4?: string;
 }
 
-export type GameMode = "normal" | "setchain" | "ultraset" | "ultra9";
+export type GameMode = "normal" | "junior" | "setchain" | "ultraset" | "ultra9";
 
-/** Generates a random 81-card deck using a Fisher-Yates shuffle. */
-export function generateDeck() {
-  const deck: Array<string> = [];
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      for (let k = 0; k < 3; k++) {
-        for (let l = 0; l < 3; l++) {
-          deck.push(`${i}${j}${k}${l}`);
-        }
-      }
-    }
-  }
+function makeCards(symbols: string[], traits: number): string[] {
+  if (traits === 1) return symbols;
+  return makeCards(symbols, traits - 1).flatMap((lhs) =>
+    symbols.map((s) => lhs + s)
+  );
+}
+
+/** Generates a random deck using a Fisher-Yates shuffle. */
+export function generateDeck(gameMode: GameMode) {
+  const deck = makeCards(["0", "1", "2"], modes[gameMode].traits);
   // Fisher-Yates
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -72,6 +70,7 @@ export function findSet(deck: string[], gameMode: GameMode, old?: string[]) {
       const c = conjugateCard(deck[i], deck[j]);
       if (
         gameMode === "normal" ||
+        gameMode === "junior" ||
         (gameMode === "setchain" && old!.length === 0)
       ) {
         if (deckSet.has(c)) {
@@ -146,15 +145,23 @@ function replayEventChain(
 
 const modes = {
   normal: {
+    traits: 4,
+    replayFn: replayEventCommon,
+  },
+  junior: {
+    traits: 3,
     replayFn: replayEventCommon,
   },
   setchain: {
+    traits: 4,
     replayFn: replayEventChain,
   },
   ultraset: {
+    traits: 4,
     replayFn: replayEventCommon,
   },
   ultra9: {
+    traits: 4,
     replayFn: replayEventCommon,
   },
 };
@@ -177,10 +184,7 @@ export function replayEvents(
   const deck: Set<string> = new Set(gameData.child("deck").val());
   const history: GameEvent[] = [];
   const scores: Record<string, number> = {};
-  const replayFn = modes[gameMode]?.replayFn;
-  if (!replayFn) {
-    throw new Error(`invalid gameMode ${gameMode}`);
-  }
+  const replayFn = modes[gameMode].replayFn;
   let finalTime = 0;
   for (const event of events) {
     if (replayFn(deck, event, history)) {

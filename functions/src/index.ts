@@ -55,7 +55,6 @@ export const finishGame = functions.https.onCall(async (data, context) => {
       "The function must be called while authenticated."
     );
   }
-
   const gameData = await admin
     .database()
     .ref(`gameData/${gameId}`)
@@ -69,7 +68,6 @@ export const finishGame = functions.https.onCall(async (data, context) => {
   }
 
   const gameMode = (gameSnap.child("mode").val() as GameMode) || "normal";
-
   const { lastSet, deck, finalTime, scores } = replayEvents(gameData, gameMode);
 
   if (findSet(Array.from(deck), gameMode, lastSet)) {
@@ -242,7 +240,6 @@ export const createGame = functions.https.onCall(async (data, context) => {
   }
 
   const userId = context.auth.uid;
-
   const oneHourAgo = Date.now() - 3600000;
   const recentGameIds = await admin
     .database()
@@ -268,30 +265,32 @@ export const createGame = functions.https.onCall(async (data, context) => {
     }
   }
 
-  const gameRef = admin.database().ref(`games/${gameId}`);
-  const { committed, snapshot } = await gameRef.transaction((currentData) => {
-    if (currentData === null) {
-      if (
-        unfinishedGames >= MAX_UNFINISHED_GAMES_PER_HOUR &&
-        access === "public"
-      ) {
-        throw new functions.https.HttpsError(
-          "resource-exhausted",
-          "Too many unfinished public games were recently created."
-        );
+  const { committed, snapshot } = await admin
+    .database()
+    .ref(`games/${gameId}`)
+    .transaction((currentData) => {
+      if (currentData === null) {
+        if (
+          unfinishedGames >= MAX_UNFINISHED_GAMES_PER_HOUR &&
+          access === "public"
+        ) {
+          throw new functions.https.HttpsError(
+            "resource-exhausted",
+            "Too many unfinished public games were recently created."
+          );
+        }
+        return {
+          host: userId,
+          createdAt: admin.database.ServerValue.TIMESTAMP,
+          status: "waiting",
+          access,
+          mode,
+          enableHint,
+        };
+      } else {
+        return;
       }
-      return {
-        host: userId,
-        createdAt: admin.database.ServerValue.TIMESTAMP,
-        status: "waiting",
-        access,
-        mode,
-        enableHint,
-      };
-    } else {
-      return;
-    }
-  });
+    });
   if (!committed) {
     throw new functions.https.HttpsError(
       "already-exists",
@@ -300,18 +299,69 @@ export const createGame = functions.https.onCall(async (data, context) => {
   }
 
   // After this point, the game has successfully been created.
-  // We update the database asynchronously in three different places:
-  //   1. /gameData/:gameId
-  //   2. /stats/gameCount
-  //   3. /publicGames/:gameId (if access is public)
-  const updates: { [key: string]: any } = {};
-  updates[`gameData/${gameId}`] = { deck: generateDeck() };
+  // We update the database atomically in different places:
+  //   1. /stats/gameCount
+  //   2. /publicGames/:gameId (if access is public)
+  const updates: Record<string, any> = {};
   updates["stats/gameCount"] = admin.database.ServerValue.increment(1);
   if (access === "public") {
     updates[`publicGames/${gameId}`] = snapshot.child("createdAt").val();
   }
   await admin.database().ref().update(updates);
   return snapshot.val();
+});
+
+/** Starts the game that was previously created */
+export const startGame = functions.https.onCall(async (data, context) => {
+  const gameId = data.gameId;
+  if (
+    !(typeof gameId === "string") ||
+    gameId.length === 0 ||
+    gameId.length > MAX_GAME_ID_LENGTH
+  ) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "The function must be called with " +
+        "argument `gameId` to be started at `/games/:gameId`."
+    );
+  }
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      "The function must be called while authenticated."
+    );
+  }
+  const userId = context.auth.uid;
+  const { committed, snapshot }: TransactionResult = await admin
+    .database()
+    .ref(`games/${gameId}`)
+    .transaction((game) => {
+      if (game === null) {
+        // Transaction handler should always handle null, because firebase often
+        // calls it like that: https://stackoverflow.com/a/65415636/5190601
+        return null;
+      }
+      if (game.host !== userId || game.status !== "waiting") {
+        // Someone beat us to the atomic update, so we cancel the transaction.
+        return;
+      }
+      game.status = "starting";
+      return game;
+    });
+
+  if (!committed || !snapshot.exists()) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      `The game with gameId ${gameId} does not exist or was already started.`
+    );
+  }
+
+  const gameMode = (snapshot.child("mode").val() as GameMode) || "normal";
+  const updates: Record<string, any> = {};
+  updates[`gameData/${gameId}`] = { deck: generateDeck(gameMode) };
+  updates[`games/${gameId}/status`] = "ingame";
+  updates[`games/${gameId}/startedAt`] = admin.database.ServerValue.TIMESTAMP;
+  await admin.database().ref().update(updates);
 });
 
 /** Generate a link to the customer portal. */

@@ -21,7 +21,7 @@ import SimpleInput from "../components/SimpleInput";
 import RoomUserList from "../components/RoomUserList";
 import Subheading from "../components/Subheading";
 import Chat from "../components/Chat";
-import firebase from "../firebase";
+import firebase, { startGame } from "../firebase";
 import { UserContext } from "../context";
 import GameSettings from "../components/GameSettings";
 import { capitalizeFirst } from "../util";
@@ -85,7 +85,7 @@ function RoomPage({ match, location }) {
     if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       if (!leaving && user.id === game?.host) {
-        startGame();
+        startGame({ gameId });
       }
     }
   });
@@ -107,13 +107,6 @@ function RoomPage({ match, location }) {
 
   function handleCopy() {
     navigator.clipboard.writeText(link).then(() => setCopiedLink(true));
-  }
-
-  function startGame() {
-    firebase.database().ref(`games/${gameId}`).update({
-      status: "ingame",
-      startedAt: firebase.database.ServerValue.TIMESTAMP,
-    });
   }
 
   function leaveGame() {
@@ -220,7 +213,7 @@ function RoomPage({ match, location }) {
                       variant="contained"
                       color="primary"
                       fullWidth
-                      onClick={startGame}
+                      onClick={() => startGame({ gameId })}
                     >
                       Start game
                     </Button>

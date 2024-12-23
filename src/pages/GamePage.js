@@ -143,7 +143,7 @@ function GamePage({ match }) {
     return <NotFoundPage />;
   }
 
-  if (game.status === "waiting") {
+  if (game.status === "waiting" || game.status === "starting") {
     return (
       <Container>
         <Box p={4}>

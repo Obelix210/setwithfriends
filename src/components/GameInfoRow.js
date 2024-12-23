@@ -35,6 +35,7 @@ function GameInfoRow({ gameId, onClick }) {
   const actionIcon = (host) => {
     let title, Icon;
     switch (game.status) {
+      case "starting":
       case "ingame":
         title = "Ongoing game";
         Icon = VisibilityIcon;

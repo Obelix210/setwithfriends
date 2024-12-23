@@ -1,18 +1,15 @@
 export const BASE_RATING = 1200;
 export const SCALING_FACTOR = 800;
 
+function makeCards(symbols, traits) {
+  if (traits === 1) return symbols;
+  return makeCards(symbols, traits - 1).flatMap((lhs) =>
+    symbols.map((s) => lhs + s)
+  );
+}
+
 export function generateCards(gameMode) {
-  const deck = [];
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      for (let k = 0; k < 3; k++) {
-        for (let l = 0; l < 3; l++) {
-          deck.push(`${i}${j}${k}${l}`);
-        }
-      }
-    }
-  }
-  return deck;
+  return makeCards(["0", "1", "2"], modes[gameMode].traits);
 }
 
 export function checkSet(a, b, c) {
@@ -63,6 +60,17 @@ export function removeCard(deck, card) {
   return [...deck.slice(0, i), ...deck.slice(i + 1)];
 }
 
+export function cardTraits(card) {
+  const zeroCode = "0".charCodeAt(0);
+  const traits = card.length;
+  return {
+    color: card.charCodeAt(0) - zeroCode,
+    shape: card.charCodeAt(1) - zeroCode,
+    shade: traits < 4 ? 0 : card.charCodeAt(2) - zeroCode,
+    number: card.charCodeAt(traits - 1) - zeroCode,
+  };
+}
+
 export function findSet(deck, gameMode = "normal", old) {
   const deckSet = new Set(deck);
   const ultraConjugates = {};
@@ -71,6 +79,7 @@ export function findSet(deck, gameMode = "normal", old) {
       const c = conjugateCard(deck[i], deck[j]);
       if (
         gameMode === "normal" ||
+        gameMode === "junior" ||
         (gameMode === "setchain" && old.length === 0)
       ) {
         if (deckSet.has(c)) {
@@ -230,6 +239,16 @@ export const modes = {
     color: "purple",
     description: "Find 3 cards that form a Set.",
     setType: "Set",
+    traits: 4,
+    checkFn: checkSet,
+    processFn: processEventCommon,
+  },
+  junior: {
+    name: "Junior",
+    color: "green",
+    description: "A simplified version that only uses solid shaded cards.",
+    setType: "Set",
+    traits: 3,
     checkFn: checkSet,
     processFn: processEventCommon,
   },
@@ -238,6 +257,7 @@ export const modes = {
     color: "teal",
     description: "In every Set, you have to use 1 card from the previous Set.",
     setType: "Set",
+    traits: 4,
     checkFn: checkSet,
     processFn: processEventChain,
   },
@@ -247,6 +267,7 @@ export const modes = {
     description:
       "Find 4 cards such that the first pair and the second pair form a Set with the same additional card.",
     setType: "UltraSet",
+    traits: 4,
     checkFn: checkSetUltra,
     processFn: processEventCommon,
   },
@@ -256,6 +277,7 @@ export const modes = {
     description:
       "Same as UltraSet, but only 9 cards are dealt at a time, unless they don't contain any sets.",
     setType: "UltraSet",
+    traits: 4,
     checkFn: checkSetUltra,
     processFn: processEventCommon,
   },
