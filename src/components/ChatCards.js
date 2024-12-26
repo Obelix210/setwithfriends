@@ -26,6 +26,11 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     alignItems: "center",
   },
+  GhostSetCards: {
+    display: "flex",
+    justifyContent: "center",
+    whitespace: "nowrap"
+  },
 }));
 
 function ChatCards({ item, gameMode, startedAt }) {
@@ -65,6 +70,22 @@ function ChatCards({ item, gameMode, startedAt }) {
               <SetCard size="sm" value={item.c4} />
             </div>
           </div>
+        )}
+        {setType === "GhostSet" && (
+          <div className={classes.GhostSetCards}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <SetCard size="sm" value={item.c1} />
+            <SetCard size="sm" value={item.c4} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <SetCard size="sm" value={item.c2} />
+            <SetCard size="sm" value={item.c5} />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <SetCard size="sm" value={item.c3} />
+            <SetCard size="sm" value={item.c6} />
+          </div>
+        </div>
         )}
       </div>
     </Tooltip>

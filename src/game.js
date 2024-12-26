@@ -77,8 +77,16 @@ export function checkSetUltra(a, b, c, d) {
   return null;
 }
 
+export function checkSetGhost(a, b, c, d, e, f) {
+  for (let i = 0; i < a.length; i++) {
+    if ((a.charCodeAt(i) + b.charCodeAt(i) + c.charCodeAt(i) + d.charCodeAt(i) + e.charCodeAt(i) + f.charCodeAt(i)) % 3 !== 0)
+      return null;
+  }
+  return [a ,b ,c ,d ,e ,f];
+}
+
 export function addCard(deck, card, gameMode, lastSet) {
-  const cardsInSet = modes[gameMode].setType === "UltraSet" ? 4 : 3;
+  const cardsInSet = modes[gameMode].setType === "UltraSet" ? 4 : modes[gameMode].setType === "GhostSet" ? 6 : 3;
   let res;
   if (gameMode === "setchain" && lastSet.includes(card)) {
     // Move the card from lastSet to the front and remove one if it was already there
@@ -131,6 +139,17 @@ export function findSet(deck, gameMode = "normal", old) {
           return [...ultraConjugates[c], deck[i], deck[j]];
         }
         ultraConjugates[c] = [deck[i], deck[j]];
+      } else if (gameMode === "ghostset") {
+        for (let k = j + 1; k < deck.length; k++) {
+          for (let l = k + 1; l < deck.length; l++) {
+            for (let m = l + 1; m < deck.length; m++) {
+              for (let n = m + 1; n < deck.length; n++) {
+                if (checkSetGhost(deck[i], deck[j], deck[k], deck[l], deck[m], deck[n])) 
+                  return [deck[i], deck[j], deck[k], deck[l], deck[m], deck[n]];
+              } 
+            }
+          }
+        }
       }
     }
   }
@@ -199,6 +218,8 @@ function processEventCommon(internalGameState, event) {
   const { used } = internalGameState;
   const cards = [event.c1, event.c2, event.c3];
   if (event.c4) cards.push(event.c4);
+  if (event.c5) cards.push(event.c5);
+  if (event.c6) cards.push(event.c6);
   if (hasDuplicates(cards) || hasUsedCards(used, cards)) return;
   processValidEvent(internalGameState, event, cards);
   updateBoard(internalGameState, cards);
@@ -325,6 +346,17 @@ export const modes = {
     traits: 4,
     minBoardSize: 9,
     checkFn: checkSetUltra,
+    processFn: processEventCommon,
+  },
+  ghostset: {
+    name: "GhostSet",
+    color: "blue",
+    description:
+      "Find 3 disjoint pairs of cards where the missing cards form a Set.",
+    setType: "GhostSet",
+    traits: 4,
+    minBoardSize: 9,
+    checkFn: checkSetGhost,
     processFn: processEventCommon,
   },
 };
